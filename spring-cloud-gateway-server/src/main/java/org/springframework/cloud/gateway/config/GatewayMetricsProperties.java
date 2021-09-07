@@ -53,6 +53,12 @@ public class GatewayMetricsProperties {
 	@NotNull
 	private Map<String, String> tags = new HashMap<>();
 
+	/**
+	 * Set of route metadata items which should be added as tags to metrics.
+	 */
+	@NotNull
+	private Set<String> routeMetadataTags = new HashSet<String>();
+
 	public boolean isEnabled() {
 		return enabled;
 	}
@@ -77,11 +83,18 @@ public class GatewayMetricsProperties {
 		this.tags = tags;
 	}
 
+	public Set<String> getRouteMetadataTags() {
+		return routeMetadataTags;
+	}
+
+	public void setRouteMetadataTags(Set<String> routeMetadataTags) {
+		this.routeMetadataTags = routeMetadataTags;
+	}
+
 	@Override
 	public String toString() {
 		return new ToStringCreator(this).append("enabled", enabled).append("prefix", prefix).append("tags", tags)
-				.toString();
-
+				.append("routeMetadataTags", routeMetadataTags).toString();
 	}
 
 }

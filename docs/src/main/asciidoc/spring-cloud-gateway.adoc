@@ -1869,6 +1869,28 @@ These metrics are then available to be scraped from `/actuator/metrics/gateway.r
 
 NOTE: To enable the prometheus endpoint, add `micrometer-registry-prometheus` as a project dependency.
 
+==== Custom Tagging
+### Custom Tagging
+The `observability` config block holds properties related to EG observability extensions (metrics, apm, ...).
+From here you can configure custom tag behaviour to decorate the metrics reported to micrometer. Support is available for:
+* Route-metadata-tags: supplied items will be used as keys to retrieve values from [route metadata](https://cloud.spring.io/spring-cloud-gateway/reference/html/#route-metadata-configuration). Non-String metadata items will be ignored.
+
+
+====
+[source,yaml]
+----
+spring:
+  cloud:
+    gateway:
+      metrics:
+        enabled: true
+        tags:
+          route-metadata-tags:
+            - key1
+            - key2
+----
+====
+
 === Marking An Exchange As Routed
 
 After the gateway has routed a `ServerWebExchange`, it marks that exchange as "`routed`" by adding `gatewayAlreadyRouted`

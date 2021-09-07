@@ -16,24 +16,44 @@
 
 package org.springframework.cloud.gateway.support.tagsprovider;
 
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 
 import org.springframework.cloud.gateway.route.Route;
 import org.springframework.web.server.ServerWebExchange;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR;
 
 /**
+ * Create route-related tags. By default, routeId & routeUri. A set of metadata keys can
+ * be supplied to filter route metadata and create GatewayTags of the matched values.
+ * Non-String metadata items will be ignored to avoid adding high-cardinality tags.
+ *
  * @author Ingyu Hwang
  */
 public class GatewayRouteTagsProvider implements GatewayTagsProvider {
+
+	private final Set<String> metadataKeys;
+
+	public GatewayRouteTagsProvider(Set<String> metadataKeys) {
+		this.metadataKeys = metadataKeys;
+	}
 
 	@Override
 	public Tags apply(ServerWebExchange exchange) {
 		Route route = exchange.getAttribute(GATEWAY_ROUTE_ATTR);
 
 		if (route != null) {
-			return Tags.of("routeId", route.getId(), "routeUri", route.getUri().toString());
+			final Map<String, Object> metadata = route.getMetadata();
+			return Tags.of(metadataKeys.stream()
+							.filter(key -> metadata.containsKey(key) && metadata.get(key) instanceof String)
+							.map(key -> Tag.of(key, metadata.get(key).toString()))
+					.collect(Collectors.toList()))
+					.and("routeId", route.getId(), "routeUri", route.getUri().toString());
 		}
 
 		return Tags.empty();

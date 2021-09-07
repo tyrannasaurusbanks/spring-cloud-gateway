@@ -19,10 +19,16 @@ package org.springframework.cloud.gateway.support.tagsprovider;
 import io.micrometer.core.instrument.Tags;
 import org.junit.Test;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.cloud.gateway.route.Route;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR;
@@ -32,7 +38,13 @@ import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.G
  */
 public class GatewayRouteTagsProviderTests {
 
-	private final GatewayRouteTagsProvider tagsProvider = new GatewayRouteTagsProvider();
+	private final Set<String> testMetadataKeys = new HashSet<String>() {{
+		add("a");
+		add("b");
+		add("c");
+	}};
+
+	private final GatewayRouteTagsProvider tagsProvider = new GatewayRouteTagsProvider(testMetadataKeys);
 
 	private static final String ROUTE_URI = "http://gatewaytagsprovider.org:80";
 
@@ -43,7 +55,7 @@ public class GatewayRouteTagsProviderTests {
 	private static final Tags DEFAULT_TAGS = Tags.of("routeId", ROUTE_ID, "routeUri", ROUTE_URI);
 
 	@Test
-	public void routeTags() {
+	public void defaultRouteTagsAreAdded() {
 		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(ROUTE_URI).build());
 		exchange.getAttributes().put(GATEWAY_ROUTE_ATTR, ROUTE);
 
@@ -52,12 +64,47 @@ public class GatewayRouteTagsProviderTests {
 	}
 
 	@Test
-	public void emptyRoute() {
+	public void noTagsAreAddedToEmptyRoute() {
 		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(ROUTE_URI).build());
 
 		Tags tags = tagsProvider.apply(exchange);
 		assertThat(tags).isEqualTo(Tags.empty());
 
+	}
+
+	@Test
+	public void testMatchedMetadataKeysAreAddedAndNonMatchedAreIgnored() {
+		Map<String, Object> actual = new HashMap<String, Object>() {{
+			put("a", "present");
+			put("b", "present");
+			put("d", "ignored");
+		}};
+		Route route = Route.async()
+				.id("test-route")
+				.uri("https://test-route-uri")
+				.metadata(actual)
+				.predicate(foo -> true)
+				.build();
+
+		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("").build());
+		exchange.getAttributes().put(GATEWAY_ROUTE_ATTR, route);
+		Tags tags = tagsProvider.apply(exchange);
+		assertThat(tags).isEqualTo(Tags.of("a", "present", "b", "present"));
+	}
+
+	@Test
+	public void testProviderIgnoresNonMatchedKeysAndNonStringObjects() {
+		Map<String, Object> actual = new HashMap<String, Object>() {{
+			put("a", "present");
+			put("b", 1);
+			put("c", new String[]{"should", "be", "ignore"});
+		}};
+		Route route = Route.async().id(ROUTE_ID).uri(ROUTE_URI).metadata(actual).predicate(swe -> true).build();
+
+		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("").build());
+		exchange.getAttributes().put(GATEWAY_ROUTE_ATTR, route);
+		Tags tags = tagsProvider.apply(exchange);
+		assertThat(tags).isEqualTo(Tags.of("a", "present"));
 	}
 
 }

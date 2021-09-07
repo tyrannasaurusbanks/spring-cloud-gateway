@@ -52,8 +52,8 @@ public class GatewayMetricsAutoConfiguration {
 	}
 
 	@Bean
-	public GatewayRouteTagsProvider gatewayRouteTagsProvider() {
-		return new GatewayRouteTagsProvider();
+	public GatewayRouteTagsProvider gatewayRouteTagsProvider(GatewayMetricsProperties properties) {
+		return new GatewayRouteTagsProvider(properties.getRouteMetadataTags());
 	}
 
 	@Bean
